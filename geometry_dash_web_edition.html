@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometry Dash - Web Edition</title>
+    <!-- Tailwind CSS for sleek UI overlay styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pusab&family=Teko:wght@600;700&family=Inter:wght@400;700;900&display=swap');
+
+        body {
+            background-color: #080711;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        .gd-title {
+            font-family: 'Teko', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.6), 0 4px 0 #000;
+        }
+
+        .gd-button {
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 6px 0 #000, 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .gd-button:hover {
+            transform: translateY(-2px) scale(1.03);
+            box-shadow: 0 8px 0 #000, 0 0 25px rgba(0, 255, 204, 0.6);
+        }
+
+        .gd-button:active {
+            transform: translateY(4px) scale(0.98);
+            box-shadow: 0 2px 0 #000, 0 0 10px rgba(0, 255, 204, 0.4);
+        }
+
+        /* Glassmorphism UI panel */
+        .glass-panel {
+            background: rgba(15, 15, 30, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Neon Glows */
+        .glow-cyan { text-shadow: 0 0 12px #00f0ff; }
+        .glow-magenta { text-shadow: 0 0 12px #ff007f; }
+        .glow-yellow { text-shadow: 0 0 12px #ffea00; }
+        .glow-green { text-shadow: 0 0 12px #00ff66; }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex items-center justify-center p-0 m-0 bg-black">
+
+    <!-- Game Container with standard aspect ratio (16:9) -->
+    <div id="game-container" class="relative w-full h-full max-w-[1280px] max-h-[720px] aspect-video overflow-hidden shadow-2xl rounded-lg border border-slate-800 bg-slate-950">
+
+        <!-- HTML5 Canvas Render Layer -->
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+        <!-- Top In-Game Progress HUD -->
+        <div id="hud-overlay" class="hidden absolute top-0 left-0 w-full p-4 flex flex-col items-center pointer-events-none z-10">
+            <!-- Progress Bar Frame -->
+            <div class="w-full max-w-xl h-5 bg-slate-900/80 rounded-full border border-slate-700/80 p-0.5 shadow-lg relative overflow-hidden backdrop-blur-sm">
+                <!-- Inner Animated Progress Bar -->
+                <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-yellow-400 rounded-full w-0% transition-all duration-75 shadow-[0_0_12px_rgba(0,255,204,0.8)]"></div>
+            </div>
+            
+            <!-- HUD Info Badges -->
+            <div class="w-full max-w-xl flex justify-between items-center mt-2 px-2 text-white font-bold text-sm tracking-wider">
+                <span id="attempt-badge" class="bg-slate-900/80 px-3 py-1 rounded-md border border-slate-700/60 shadow">ATTEMPT 1</span>
+                <span id="progress-percent" class="text-emerald-400 text-lg glow-green font-extrabold">0%</span>
+                <span id="mode-badge" class="bg-slate-900/80 px-3 py-1 rounded-md border border-slate-700/60 shadow text-cyan-400">NORMAL MODE</span>
+            </div>
+        </div>
+
+        <!-- Audio & Pause Controls Overlay (Top Right) -->
+        <div id="hud-buttons" class="hidden absolute top-4 right-4 z-20 flex gap-3">
+            <button id="btn-audio-toggle" class="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-white rounded-xl border border-slate-700 shadow-md backdrop-blur pointer-events-auto transition active:scale-95">
+                <svg id="icon-sound-on" class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                <svg id="icon-sound-off" class="w-6 h-6 text-rose-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+            </button>
+            <button id="btn-pause" class="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-white rounded-xl border border-slate-700 shadow-md backdrop-blur pointer-events-auto transition active:scale-95">
+                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+        </div>
+
+        <!-- MAIN MENU OVERLAY -->
+        <div id="main-menu" class="absolute inset-0 z-30 flex flex-col items-center justify-between p-8 bg-gradient-to-b from-slate-950/90 via-slate-900/95 to-slate-950/95 backdrop-blur-md">
+            
+            <!-- Header Banner -->
+            <div class="text-center mt-6">
+                <h1 class="gd-title text-7xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 drop-shadow-[0_5px_15px_rgba(0,255,204,0.4)]">
+                    GEOMETRY DASH
+                </h1>
+                <p class="text-slate-400 font-medium tracking-widest text-sm md:text-base -mt-2">WEB EDITION • HTML5 CANVAS</p>
+            </div>
+
+            <!-- Level Select & Play Center Area -->
+            <div class="flex flex-col items-center gap-6 my-auto w-full max-w-lg">
+                <!-- Level Card -->
+                <div class="w-full glass-panel rounded-2xl p-6 text-center border border-cyan-500/30 shadow-[0_0_30px_rgba(0,240,255,0.15)] relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-emerald-400"></div>
+                    <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 mb-2">HARD ★ 4</span>
+                    <h2 class="text-3xl font-extrabold text-white tracking-wide glow-cyan mb-1">STEREO MADNESS</h2>
+                    <p class="text-xs text-slate-400 mb-4">Duration: 1m 40s (100 Seconds) • Speed: 1.0x</p>
+                    
+                    <!-- Skin / Color Palette Picker -->
+                    <div class="flex items-center justify-center gap-4 py-2 border-t border-slate-800">
+                        <span class="text-xs text-slate-400 font-semibold uppercase">Cube Skin:</span>
+                        <div class="flex gap-2" id="skin-selector">
+                            <button data-color="#00f0ff" class="skin-btn w-8 h-8 rounded-lg bg-cyan-400 border-2 border-white shadow-lg transition scale-110"></button>
+                            <button data-color="#00ff66" class="skin-btn w-8 h-8 rounded-lg bg-emerald-400 border-2 border-transparent hover:scale-105 transition"></button>
+                            <button data-color="#ff007f" class="skin-btn w-8 h-8 rounded-lg bg-pink-500 border-2 border-transparent hover:scale-105 transition"></button>
+                            <button data-color="#ffea00" class="skin-btn w-8 h-8 rounded-lg bg-yellow-400 border-2 border-transparent hover:scale-105 transition"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Big Play Button -->
+                <button id="btn-play" class="gd-button w-48 h-20 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black text-3xl rounded-2xl flex items-center justify-center gap-3 border-2 border-emerald-200">
+                    <svg class="w-10 h-10 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    PLAY
+                </button>
+            </div>
+
+            <!-- Footer & Info -->
+            <div class="w-full flex justify-between items-end text-xs text-slate-400 border-t border-slate-800/80 pt-4">
+                <div>Controls: <span class="text-cyan-400 font-bold">Space / Up Arrow / Tap Screen</span> to Jump</div>
+                <div id="best-score-display" class="text-emerald-400 font-bold">BEST: 0%</div>
+            </div>
+        </div>
+
+        <!-- GAME OVER OVERLAY -->
+        <div id="game-over-menu" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
+            <div class="glass-panel max-w-md w-full rounded-3xl p-8 text-center border border-rose-500/40 shadow-[0_0_50px_rgba(244,63,94,0.2)] animate-bounce-short">
+                <h2 class="gd-title text-6xl font-black text-rose-500 glow-magenta mb-2">DESTROYED!</h2>
+                
+                <div class="my-6">
+                    <div class="text-slate-400 text-sm font-semibold uppercase tracking-widest">Progress Completed</div>
+                    <div id="death-percent" class="text-5xl font-black text-white glow-cyan my-1">68%</div>
+                    <div id="death-attempt" class="text-xs text-slate-400 font-medium">Attempt 4</div>
+                </div>
+
+                <div class="flex gap-4 justify-center mt-6">
+                    <button id="btn-restart" class="gd-button flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-extrabold text-xl rounded-2xl border border-cyan-300 flex items-center justify-center gap-2">
+                        <svg class="w-6 h-6 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        TRY AGAIN
+                    </button>
+                    <button id="btn-menu-from-death" class="p-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl border border-slate-600">
+                        <svg class="w-6 h-6 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VICTORY OVERLAY -->
+        <div id="victory-menu" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-6 bg-slate-950/85 backdrop-blur-md">
+            <div class="glass-panel max-w-md w-full rounded-3xl p-8 text-center border border-emerald-400/50 shadow-[0_0_60px_rgba(16,185,129,0.3)]">
+                <div class="inline-flex p-3 rounded-full bg-emerald-500/20 text-emerald-400 mb-3 border border-emerald-400/40">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <h2 class="gd-title text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 glow-green mb-1">LEVEL COMPLETE!</h2>
+                <p class="text-emerald-300 text-sm font-semibold tracking-wider mb-6">100% CLEAR • YOU CONQUERED THE RUN!</p>
+
+                <div class="bg-slate-900/70 rounded-xl p-4 border border-slate-800 flex justify-around mb-6 text-center">
+                    <div>
+                        <div class="text-xs text-slate-400">TOTAL TIME</div>
+                        <div class="text-xl font-bold text-white">1m 40s</div>
+                    </div>
+                    <div class="border-r border-slate-800"></div>
+                    <div>
+                        <div class="text-xs text-slate-400">ATTEMPTS</div>
+                        <div id="victory-attempts" class="text-xl font-bold text-cyan-400">1</div>
+                    </div>
+                </div>
+
+                <button id="btn-victory-replay" class="gd-button w-full py-4 bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black text-xl rounded-2xl border border-emerald-200 flex items-center justify-center gap-2">
+                    PLAY AGAIN
+                </button>
+            </div>
+        </div>
+
+        <!-- PAUSE MENU OVERLAY -->
+        <div id="pause-menu" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md">
+            <div class="glass-panel max-w-xs w-full rounded-3xl p-6 text-center border border-slate-700">
+                <h3 class="gd-title text-4xl text-white mb-6">PAUSED</h3>
+                <div class="flex flex-col gap-3">
+                    <button id="btn-resume" class="gd-button py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl">RESUME</button>
+                    <button id="btn-pause-restart" class="py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl border border-slate-700">RESTART</button>
+                    <button id="btn-pause-menu" class="py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 font-semibold rounded-xl border border-slate-800">MAIN MENU</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAIN GAME LOGIC SCRIPT -->
+    <script>
+        /**
+         * GEOMETRY DASH - WEB EDITION ENGINE
+         * High performance HTML5 Canvas implementation.
+         */
+
+        // Game Constants & Configuration
+        const CANVAS_WIDTH = 1280;
+        const CANVAS_HEIGHT = 720;
+        const GROUND_Y = 570;               // Y level where ground floor rests
+        const CUBE_SIZE = 46;               // Cube width/height in pixels
+        const GAME_SPEED = 8.8;             // Horizontal scrolling speed
+        const GRAVITY = 1.35;               // Downward gravitational acceleration
+        const JUMP_IMPULSE = -17.2;         // Upward initial jump velocity
+        const TOTAL_DURATION_SEC = 100;     // Level duration: 1 minute 40 seconds = 100s
+        const FPS = 60;
+        const TOTAL_FRAMES = TOTAL_DURATION_SEC * FPS;
+
+        // Audio Engine using Web Audio API (Procedural Synthesizer)
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.musicInterval = null;
+                this.beatStep = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playJump() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(680, this.ctx.currentTime + 0.12);
+                    
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.12);
+                } catch(e){}
+            }
+
+            playExplode() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    // White noise buffer for explosion shatter effect
+                    const bufferSize = this.ctx.sampleRate * 0.4;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const output = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+                    filter.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.35);
+
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.38);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    noise.start();
+                } catch(e){}
+            }
+
+            playVictory() {
+                if (this.muted || !this.ctx) return;
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // C E G C E G
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        try {
+                            const osc = this.ctx.createOscillator();
+                            const gain = this.ctx.createGain();
+                            osc.type = 'triangle';
+                            osc.frequency.value = freq;
+                            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+                            osc.connect(gain);
+                            gain.connect(this.ctx.destination);
+                            osc.start();
+                            osc.stop(this.ctx.currentTime + 0.4);
+                        } catch(e){}
+                    }, idx * 90);
+                });
+            }
+
+            startMusic() {
+                if (!this.ctx) return;
+                this.stopMusic();
+                
+                // Energetic 128 BPM Synth Bassline & Melody Loop
+                const tempo = 128;
+                const stepTime = (60 / tempo) / 4 * 1000;
+                
+                const bassScale = [110, 110, 130.81, 110, 146.83, 110, 130.81, 98.00]; // A2 scale
+                
+                this.musicInterval = setInterval(() => {
+                    if (this.muted || !this.ctx) return;
+                    try {
+                        const now = this.ctx.currentTime;
+                        
+                        // Synth Bass Pulse
+                        const bassOsc = this.ctx.createOscillator();
+                        const bassGain = this.ctx.createGain();
+                        bassOsc.type = 'sawtooth';
+                        bassOsc.frequency.value = bassScale[this.beatStep % bassScale.length];
+                        
+                        bassGain.gain.setValueAtTime(0.08, now);
+                        bassGain.gain.exponentialRampToValueAtTime(0.005, now + 0.12);
+                        
+                        bassOsc.connect(bassGain);
+                        bassGain.connect(this.ctx.destination);
+                        bassOsc.start(now);
+                        bassOsc.stop(now + 0.12);
+
+                        // Synth Kick Drum on beats 0, 4, 8, 12
+                        if (this.beatStep % 4 === 0) {
+                            const kickOsc = this.ctx.createOscillator();
+                            const kickGain = this.ctx.createGain();
+                            kickOsc.frequency.setValueAtTime(140, now);
+                            kickOsc.frequency.exponentialRampToValueAtTime(38, now + 0.08);
+                            kickGain.gain.setValueAtTime(0.3, now);
+                            kickGain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+                            kickOsc.connect(kickGain);
+                            kickGain.connect(this.ctx.destination);
+                            kickOsc.start(now);
+                            kickOsc.stop(now + 0.09);
+                        }
+
+                        this.beatStep++;
+                    } catch(e){}
+                }, stepTime);
+            }
+
+            stopMusic() {
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+            }
+        }
+
+        const audio = new AudioEngine();
+
+        // Level Pattern Generator (Timeline based for 100 Seconds)
+        class LevelBuilder {
+            static generateSpikes() {
+                const obstacles = [];
+                const startX = 900;
+                const totalDistance = TOTAL_FRAMES * GAME_SPEED;
+                
+                // Fixed deterministic pattern bank (Blocks & Spikes)
+                const patternBank = [
+                    // 0: Single Spike
+                    [{ type: 'spike', dx: 0, y: GROUND_Y, w: 44, h: 46 }],
+                    
+                    // 1: Double Spike
+                    [
+                        { type: 'spike', dx: 0, y: GROUND_Y, w: 44, h: 46 },
+                        { type: 'spike', dx: 44, y: GROUND_Y, w: 44, h: 46 }
+                    ],
+
+                    // 2: Single Block Platform with Spike on top
+                    [
+                        { type: 'block', dx: 0, y: GROUND_Y, w: 46, h: 46 },
+                        { type: 'spike', dx: 1, y: GROUND_Y - 46, w: 44, h: 46 }
+                    ],
+
+                    // 3: Multi-Block Platform Runway
+                    [
+                        { type: 'block', dx: 0, y: GROUND_Y, w: 46, h: 46 },
+                        { type: 'block', dx: 46, y: GROUND_Y, w: 46, h: 46 },
+                        { type: 'block', dx: 92, y: GROUND_Y, w: 46, h: 46 },
+                        { type: 'spike', dx: 160, y: GROUND_Y, w: 44, h: 46 }
+                    ],
+
+                    // 4: Double Height Block Pillar
+                    [
+                        { type: 'block', dx: 0, y: GROUND_Y, w: 46, h: 92 },
+                        { type: 'spike', dx: 130, y: GROUND_Y, w: 44, h: 46 }
+                    ],
+
+                    // 5: Triple Spike Challenge
+                    [
+                        { type: 'spike', dx: 0, y: GROUND_Y, w: 44, h: 46 },
+                        { type: 'spike', dx: 44, y: GROUND_Y, w: 44, h: 46 },
+                        { type: 'spike', dx: 88, y: GROUND_Y, w: 44, h: 46 }
+                    ],
+
+                    // 6: Staircase Jump Structure
+                    [
+                        { type: 'block', dx: 0, y: GROUND_Y, w: 46, h: 46 },
+                        { type: 'block', dx: 90, y: GROUND_Y, w: 46, h: 92 },
+                        { type: 'spike', dx: 180, y: GROUND_Y, w: 44, h: 46 }
+                    ]
+                ];
+
+                // Fixed sequence array for a 100-second level
+                const sequence = [0, 1, 2, 0, 3, 4, 1, 5, 2, 6, 0, 3, 1, 5, 4, 2, 6, 0, 1, 3, 5, 2, 4, 6];
+                
+                let currentX = startX;
+                let seqIndex = 0;
+
+                while (currentX < totalDistance - 1000) {
+                    const pattern = patternBank[sequence[seqIndex % sequence.length]];
+                    seqIndex++;
+
+                    pattern.forEach(item => {
+                        obstacles.push({
+                            x: currentX + item.dx,
+                            y: item.y, // Ground base Y position
+                            type: item.type,
+                            width: item.w,
+                            height: item.h
+                        });
+                    });
+
+                    // Fixed spacing interval per pattern
+                    currentX += 480 + ((seqIndex * 53) % 220);
+                }
+
+                return obstacles;
+            }
+        }
+
+        // Particle Sub-system (Shatter, Dust, Sparks)
+        class ParticleSystem {
+            constructor() {
+                this.particles = [];
+            }
+
+            spawnDeathShatter(x, y, color) {
+                for (let i = 0; i < 45; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 3 + Math.random() * 12;
+                    this.particles.push({
+                        x: x + (Math.random() * 30 - 15),
+                        y: y + (Math.random() * 30 - 15),
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 2,
+                        size: 4 + Math.random() * 8,
+                        rotation: Math.random() * Math.PI * 2,
+                        vRot: (Math.random() - 0.5) * 0.4,
+                        color: color,
+                        alpha: 1.0,
+                        decay: 0.015 + Math.random() * 0.02
+                    });
+                }
+            }
+
+            spawnJumpDust(x, y) {
+                for (let i = 0; i < 6; i++) {
+                    this.particles.push({
+                        x: x + Math.random() * 30,
+                        y: y,
+                        vx: -GAME_SPEED * 0.4 + (Math.random() * 2 - 1),
+                        vy: -Math.random() * 2,
+                        size: 3 + Math.random() * 5,
+                        rotation: 0,
+                        vRot: 0,
+                        color: '#00f0ff',
+                        alpha: 0.7,
+                        decay: 0.05
+                    });
+                }
+            }
+
+            update() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.rotation += p.vRot;
+                    p.alpha -= p.decay;
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                this.particles.forEach(p => {
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.fillStyle = p.color;
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation);
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.restore();
+                });
+                ctx.restore();
+            }
+        }
+
+        // Main Game Class
+        class GeometryDashGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                
+                // Game States: 'MENU', 'PLAYING', 'PAUSED', 'GAMEOVER', 'VICTORY'
+                this.state = 'MENU';
+                
+                // Player properties
+                this.cubeColor = '#00f0ff';
+                this.resetPlayer();
+                
+                // Level & Physics Tracking
+                this.currentFrame = 0;
+                this.attempts = 1;
+                this.bestPercent = 0;
+                this.obstacles = [];
+                this.particles = new ParticleSystem();
+                
+                // Control & State Locks
+                this.isJumpPressed = false;
+                this.screenShake = 0;
+                this.canRestart = false;
+                this.deathTimeout = null;
+                
+                // Background visual pulses
+                this.bgHue = 220; // Starts deep indigo/blue
+
+                this.bindEvents();
+                this.updateUI();
+                
+                // Start Main Render Loop
+                requestAnimationFrame(this.loop.bind(this));
+            }
+
+            resetPlayer() {
+                this.player = {
+                    x: 180,
+                    y: GROUND_Y - CUBE_SIZE,
+                    vy: 0,
+                    size: CUBE_SIZE,
+                    rotation: 0, // Degrees
+                    onGround: true,
+                    dead: false
+                };
+            }
+
+            startNewRun() {
+                if (this.deathTimeout) {
+                    clearTimeout(this.deathTimeout);
+                    this.deathTimeout = null;
+                }
+                
+                this.canRestart = false;
+                this.resetPlayer();
+                this.currentFrame = 0;
+                this.obstacles = LevelBuilder.generateSpikes();
+                this.particles = new ParticleSystem();
+                this.state = 'PLAYING';
+                
+                audio.init();
+                audio.startMusic();
+                
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('game-over-menu').classList.add('hidden');
+                document.getElementById('victory-menu').classList.add('hidden');
+                document.getElementById('pause-menu').classList.add('hidden');
+                document.getElementById('hud-overlay').classList.remove('hidden');
+                document.getElementById('hud-buttons').classList.remove('hidden');
+                
+                this.updateHUD();
+            }
+
+            bindEvents() {
+                // Keyboard Inputs
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        e.preventDefault();
+                        this.isJumpPressed = true;
+                        if (this.state === 'GAMEOVER' && this.canRestart) {
+                            this.attempts++;
+                            this.startNewRun();
+                        }
+                    }
+                    if (e.code === 'KeyP' || e.code === 'Escape') {
+                        if (this.state === 'PLAYING') this.pauseGame();
+                        else if (this.state === 'PAUSED') this.resumeGame();
+                    }
+                });
+
+                window.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        this.isJumpPressed = false;
+                    }
+                });
+
+                // Canvas / Touch Controls for Mobile & Mouse
+                const triggerJumpStart = (e) => {
+                    if (e.target.closest('#hud-buttons') || e.target.closest('.glass-panel')) return;
+                    this.isJumpPressed = true;
+                    if (this.state === 'GAMEOVER' && this.canRestart) {
+                        this.attempts++;
+                        this.startNewRun();
+                    }
+                };
+                const triggerJumpEnd = () => { this.isJumpPressed = false; };
+
+                this.canvas.addEventListener('mousedown', triggerJumpStart);
+                this.canvas.addEventListener('mouseup', triggerJumpEnd);
+                this.canvas.addEventListener('touchstart', (e) => { triggerJumpStart(e); e.preventDefault(); }, {passive: false});
+                this.canvas.addEventListener('touchend', triggerJumpEnd);
+
+                // UI Button Bindings
+                document.getElementById('btn-play').addEventListener('click', () => this.startNewRun());
+                document.getElementById('btn-restart').addEventListener('click', () => {
+                    this.attempts++;
+                    this.startNewRun();
+                });
+                document.getElementById('btn-menu-from-death').addEventListener('click', () => this.showMenu());
+                document.getElementById('btn-victory-replay').addEventListener('click', () => {
+                    this.attempts = 1;
+                    this.startNewRun();
+                });
+                document.getElementById('btn-pause').addEventListener('click', () => this.pauseGame());
+                document.getElementById('btn-resume').addEventListener('click', () => this.resumeGame());
+                document.getElementById('btn-pause-restart').addEventListener('click', () => this.startNewRun());
+                document.getElementById('btn-pause-menu').addEventListener('click', () => this.showMenu());
+
+                // Skin Selection
+                document.querySelectorAll('.skin-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.skin-btn').forEach(b => b.classList.remove('border-white', 'scale-110'));
+                        btn.classList.add('border-white', 'scale-110');
+                        this.cubeColor = btn.getAttribute('data-color');
+                    });
+                });
+
+                // Sound Toggle Button
+                document.getElementById('btn-audio-toggle').addEventListener('click', () => {
+                    audio.muted = !audio.muted;
+                    document.getElementById('icon-sound-on').classList.toggle('hidden', audio.muted);
+                    document.getElementById('icon-sound-off').classList.toggle('hidden', !audio.muted);
+                });
+            }
+
+            pauseGame() {
+                if (this.state !== 'PLAYING') return;
+                this.state = 'PAUSED';
+                audio.stopMusic();
+                document.getElementById('pause-menu').classList.remove('hidden');
+            }
+
+            resumeGame() {
+                if (this.state !== 'PAUSED') return;
+                this.state = 'PLAYING';
+                audio.startMusic();
+                document.getElementById('pause-menu').classList.add('hidden');
+            }
+
+            showMenu() {
+                if (this.deathTimeout) {
+                    clearTimeout(this.deathTimeout);
+                    this.deathTimeout = null;
+                }
+                this.canRestart = false;
+                this.state = 'MENU';
+                audio.stopMusic();
+                document.getElementById('main-menu').classList.remove('hidden');
+                document.getElementById('game-over-menu').classList.add('hidden');
+                document.getElementById('victory-menu').classList.add('hidden');
+                document.getElementById('pause-menu').classList.add('hidden');
+                document.getElementById('hud-overlay').classList.add('hidden');
+                document.getElementById('hud-buttons').classList.add('hidden');
+            }
+
+            triggerGameOver() {
+                this.state = 'GAMEOVER';
+                this.canRestart = false;
+                this.screenShake = 20;
+                audio.stopMusic();
+                audio.playExplode();
+
+                // Lock percentage exact value at instant of death
+                const finalPercent = Math.min(100, Math.floor((this.currentFrame / TOTAL_FRAMES) * 100));
+                if (finalPercent > this.bestPercent) {
+                    this.bestPercent = finalPercent;
+                }
+
+                simpanDataKeSpreadsheet(finalPercent, this.attempts);
+
+                // Spawn death cube explosion particles
+                this.particles.spawnDeathShatter(
+                    this.player.x + CUBE_SIZE / 2, 
+                    this.player.y + CUBE_SIZE / 2, 
+                    this.cubeColor
+                );
+
+                if (this.deathTimeout) clearTimeout(this.deathTimeout);
+
+                this.deathTimeout = setTimeout(() => {
+                    if (this.state !== 'GAMEOVER') return;
+                    document.getElementById('death-percent').innerText = `${finalPercent}%`;
+                    document.getElementById('death-attempt').innerText = `ATTEMPT ${this.attempts}`;
+                    document.getElementById('game-over-menu').classList.remove('hidden');
+                    this.updateUI();
+                    this.canRestart = true;
+                }, 500);
+            }
+
+            triggerVictory() {
+                this.state = 'VICTORY';
+                audio.stopMusic();
+                audio.playVictory();
+
+                simpanDataKeSpreadsheet(100, this.attempts);
+
+                document.getElementById('victory-attempts').innerText = this.attempts;
+                document.getElementById('victory-menu').classList.remove('hidden');
+                this.bestPercent = 100;
+                this.updateUI();
+            }
+
+            updateHUD() {
+                const percent = Math.min(100, Math.floor((this.currentFrame / TOTAL_FRAMES) * 100));
+                document.getElementById('progress-bar-fill').style.width = `${percent}%`;
+                document.getElementById('progress-percent').innerText = `${percent}%`;
+                document.getElementById('attempt-badge').innerText = `ATTEMPT ${this.attempts}`;
+            }
+
+            updateUI() {
+                document.getElementById('best-score-display').innerText = `BEST: ${this.bestPercent}%`;
+            }
+
+            // Forgiving Hitbox & Solid Block Physics Collision Detection
+            checkCollisions() {
+                const pLeft = this.player.x;
+                const pRight = this.player.x + CUBE_SIZE;
+                const pTop = this.player.y;
+                const pBottom = this.player.y + CUBE_SIZE;
+
+                for (let obs of this.obstacles) {
+                    if (obs.x > this.player.x + 140 || obs.x + obs.width < this.player.x - 60) continue;
+
+                    const obsTopY = obs.y - obs.height;
+
+                    if (obs.type === 'spike') {
+                        // FORGIVING RECTANGULAR HITBOX (Centered inside lower spike region)
+                        // Width: 32% of spike width, Height: 50% of spike height
+                        const hbWidth = obs.width * 0.32;
+                        const hbHeight = obs.height * 0.50;
+                        const hbLeft = obs.x + (obs.width - hbWidth) / 2;
+                        const hbRight = hbLeft + hbWidth;
+                        const hbTop = obs.y - hbHeight;
+                        const hbBottom = obs.y;
+
+                        // Test inner forgiving rectangle box collision
+                        if (pRight > hbLeft && pLeft < hbRight && pBottom > hbTop && pTop < hbBottom) {
+                            return true; // Spike collision!
+                        }
+                    } else if (obs.type === 'block') {
+                        const bLeft = obs.x;
+                        const bRight = obs.x + obs.width;
+                        const bTop = obsTopY;
+                        const bBottom = obs.y;
+
+                        // Check horizontal range overlap
+                        if (pRight > bLeft + 6 && pLeft < bRight - 6) {
+                            // Check landing on top of block
+                            const previousBottom = pBottom - this.player.vy;
+                            if (previousBottom <= bTop + 14 && pBottom >= bTop && this.player.vy >= 0) {
+                                // Land on top of block safely
+                                this.player.y = bTop - CUBE_SIZE;
+                                this.player.vy = 0;
+                                this.player.onGround = true;
+                            } else if (pBottom > bTop + 10 && pTop < bBottom - 4) {
+                                // Hit side or bottom face of block -> Fatal collision!
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            updatePhysics() {
+                if (this.state !== 'PLAYING') return;
+
+                this.currentFrame++;
+                this.updateHUD();
+
+                // Check Win Condition (100 Seconds survived)
+                if (this.currentFrame >= TOTAL_FRAMES) {
+                    this.triggerVictory();
+                    return;
+                }
+
+                // Handle Player Jumping & Gravity
+                if (this.isJumpPressed && this.player.onGround) {
+                    this.player.vy = JUMP_IMPULSE;
+                    this.player.onGround = false;
+                    audio.playJump();
+                    this.particles.spawnJumpDust(this.player.x, this.player.y + CUBE_SIZE);
+                }
+
+                // Assume player is in air until proven on ground or block
+                this.player.onGround = false;
+
+                // Apply Gravity
+                this.player.vy += GRAVITY;
+                this.player.y += this.player.vy;
+
+                // Ground Collision Check
+                if (this.player.y >= GROUND_Y - CUBE_SIZE) {
+                    this.player.y = GROUND_Y - CUBE_SIZE;
+                    this.player.vy = 0;
+                    this.player.onGround = true;
+                }
+
+                // Move Level Obstacles Left
+                for (let i = 0; i < this.obstacles.length; i++) {
+                    this.obstacles[i].x -= GAME_SPEED;
+                }
+
+                // Obstacle & Spike Collisions (Handles Block landings as well)
+                if (this.checkCollisions()) {
+                    this.triggerGameOver();
+                }
+
+                // Handle Aerial Rotation & Ground Snapping (90 Degree Snap)
+                if (!this.player.onGround) {
+                    this.player.rotation += 8.6; // Smooth air spin
+                } else {
+                    // Snap to nearest 90 degrees when on ground or block platform
+                    this.player.rotation = Math.round(this.player.rotation / 90) * 90;
+                }
+
+                // Update Visual Particles
+                this.particles.update();
+
+                // Screen shake decay
+                if (this.screenShake > 0) this.screenShake *= 0.88;
+            }
+
+            draw() {
+                // Apply Screen Shake if active
+                this.ctx.save();
+                if (this.screenShake > 0.5) {
+                    const shakeX = (Math.random() - 0.5) * this.screenShake;
+                    const shakeY = (Math.random() - 0.5) * this.screenShake;
+                    this.ctx.translate(shakeX, shakeY);
+                }
+
+                // 1. Draw Neon Background with Pulsing Gradients
+                const bgGradient = this.ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+                bgGradient.addColorStop(0, '#04030a');
+                bgGradient.addColorStop(0.7, '#0b091a');
+                bgGradient.addColorStop(1, '#15102a');
+                this.ctx.fillStyle = bgGradient;
+                this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Draw Scrolling Background Grid Lines
+                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+                this.ctx.lineWidth = 1.5;
+                const gridOffset = (this.currentFrame * GAME_SPEED * 0.2) % 60;
+                for (let x = -gridOffset; x < CANVAS_WIDTH; x += 60) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, GROUND_Y);
+                    this.ctx.stroke();
+                }
+
+                // 2. Draw Scrolling Ground Floor
+                const groundGradient = this.ctx.createLinearGradient(0, GROUND_Y, 0, CANVAS_HEIGHT);
+                groundGradient.addColorStop(0, '#001122');
+                groundGradient.addColorStop(1, '#00050a');
+                this.ctx.fillStyle = groundGradient;
+                this.ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+
+                // Top Glowing Neon Ground Line
+                this.ctx.shadowColor = '#00f0ff';
+                this.ctx.shadowBlur = 12;
+                this.ctx.strokeStyle = '#00f0ff';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, GROUND_Y);
+                this.ctx.lineTo(CANVAS_WIDTH, GROUND_Y);
+                this.ctx.stroke();
+                this.ctx.shadowBlur = 0; // Reset Shadow
+
+                // Ground Decorative Square Pattern
+                this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+                this.ctx.lineWidth = 2;
+                const groundPatternOffset = (this.currentFrame * GAME_SPEED) % 40;
+                for (let x = -groundPatternOffset; x < CANVAS_WIDTH; x += 40) {
+                    this.ctx.strokeRect(x, GROUND_Y + 15, 25, 25);
+                }
+
+                // 3. Draw Obstacles (Spikes & Blocks)
+                this.obstacles.forEach(obs => {
+                    if (obs.x + obs.width < -50 || obs.x > CANVAS_WIDTH + 50) return;
+
+                    if (obs.type === 'spike') {
+                        // Neon Red / Magenta Spike
+                        this.ctx.save();
+                        this.ctx.shadowColor = '#ff0055';
+                        this.ctx.shadowBlur = 10;
+                        
+                        // Spike Triangle Gradient
+                        const spikeGrad = this.ctx.createLinearGradient(obs.x, obs.y, obs.x, obs.y - obs.height);
+                        spikeGrad.addColorStop(0, '#7a0026');
+                        spikeGrad.addColorStop(1, '#ff0055');
+                        
+                        this.ctx.fillStyle = spikeGrad;
+                        this.ctx.strokeStyle = '#ffffff';
+                        this.ctx.lineWidth = 2;
+
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(obs.x, obs.y);
+                        this.ctx.lineTo(obs.x + obs.width / 2, obs.y - obs.height);
+                        this.ctx.lineTo(obs.x + obs.width, obs.y);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+                        this.ctx.stroke();
+
+                        // Inner Detail Triangle
+                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(obs.x + 10, obs.y - 2);
+                        this.ctx.lineTo(obs.x + obs.width / 2, obs.y - obs.height + 14);
+                        this.ctx.lineTo(obs.x + obs.width - 10, obs.y - 2);
+                        this.ctx.closePath();
+                        this.ctx.fill();
+
+                        this.ctx.restore();
+                    } else if (obs.type === 'block') {
+                        // Solid Block Platform with Neon Outline & Inner Grid
+                        const blockTop = obs.y - obs.height;
+
+                        this.ctx.save();
+                        this.ctx.fillStyle = '#0a0a18';
+                        this.ctx.fillRect(obs.x, blockTop, obs.width, obs.height);
+
+                        // Outer Glowing Neon Border
+                        this.ctx.shadowColor = '#00f0ff';
+                        this.ctx.shadowBlur = 8;
+                        this.ctx.strokeStyle = '#00f0ff';
+                        this.ctx.lineWidth = 3;
+                        this.ctx.strokeRect(obs.x, blockTop, obs.width, obs.height);
+
+                        // Top Cap White Highlight
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.fillRect(obs.x + 2, blockTop + 2, obs.width - 4, 4);
+
+                        // Inner Grid Line Details
+                        this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.2)';
+                        this.ctx.lineWidth = 1;
+                        for (let gx = obs.x + 15; gx < obs.x + obs.width; gx += 15) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(gx, blockTop);
+                            this.ctx.lineTo(gx, obs.y);
+                            this.ctx.stroke();
+                        }
+                        this.ctx.restore();
+                    }
+                });
+
+                // 4. Draw Player Cube (If Alive)
+                if (this.state !== 'GAMEOVER') {
+                    this.ctx.save();
+                    
+                    // Center pivot translation for rotation
+                    const centerX = this.player.x + CUBE_SIZE / 2;
+                    const centerY = this.player.y + CUBE_SIZE / 2;
+                    this.ctx.translate(centerX, centerY);
+                    this.ctx.rotate((this.player.rotation * Math.PI) / 180);
+
+                    // Outer Cube Glow
+                    this.ctx.shadowColor = this.cubeColor;
+                    this.ctx.shadowBlur = 14;
+
+                    // Cube Gradient Fill
+                    const cubeGrad = this.ctx.createLinearGradient(-CUBE_SIZE/2, -CUBE_SIZE/2, CUBE_SIZE/2, CUBE_SIZE/2);
+                    cubeGrad.addColorStop(0, '#ffffff');
+                    cubeGrad.addColorStop(0.3, this.cubeColor);
+                    cubeGrad.addColorStop(1, '#005577');
+                    
+                    this.ctx.fillStyle = cubeGrad;
+                    this.ctx.fillRect(-CUBE_SIZE / 2, -CUBE_SIZE / 2, CUBE_SIZE, CUBE_SIZE);
+
+                    // Cube Outer Border
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.strokeRect(-CUBE_SIZE / 2, -CUBE_SIZE / 2, CUBE_SIZE, CUBE_SIZE);
+
+                    // Iconic Geometry Dash Cube Face (Eyes & Mouth)
+                    this.ctx.shadowBlur = 0; // Turn off glow for inner face details
+                    this.ctx.fillStyle = '#000000';
+                    
+                    // Eyes
+                    this.ctx.fillRect(-14, -12, 9, 9);
+                    this.ctx.fillRect(5, -12, 9, 9);
+                    
+                    // Mouth
+                    this.ctx.fillRect(-10, 6, 20, 5);
+
+                    this.ctx.restore();
+                }
+
+                // 5. Draw Particle Layer
+                this.particles.draw(this.ctx);
+
+                this.ctx.restore(); // Restore screen shake state
+            }
+
+            loop() {
+                if (this.state === 'PLAYING') {
+                    this.updatePhysics();
+                } else if (this.state === 'GAMEOVER') {
+                    // Keep updating explosion particle FX and screen shake while keeping level frozen
+                    this.particles.update();
+                    if (this.screenShake > 0) this.screenShake *= 0.88;
+                }
+                this.draw();
+                requestAnimationFrame(this.loop.bind(this));
+            }
+        }
+
+        // Initialize Game Engine on Window Load
+        window.onload = () => {
+            window.gameEngine = new GeometryDashGame();
+        };
+        function simpanDataKeSpreadsheet(progressPlayer, attemptPlayer) {
+         // GANTI URL DI BAWAH INI DENGAN URL WEB APP MILIKMU YANG DISALIN TADI
+         const urlAPI = 'https://script.google.com/macros/s/AKfycbx-VmVhJCDT8xEMNcVAIacKG9SpJjOsdOivD9Hy2DhaOTa07a1vEGVWx6r8RNFvAsuqOQ/exec'; 
+
+         // Membungkus data menjadi format objek
+         const dataKirim = {
+             nama: "Player-1", // Bisa kamu kembangkan nanti pakai input nama
+             progress: progressPlayer + "%",
+             attempt: attemptPlayer
+            };
+
+         // Mengirim data ke Google Apps Script menggunakan Fetch API
+         fetch(urlAPI, {
+             method: 'POST',
+             // PENTING: Gunakan 'text/plain' agar browser tidak memblokir pengiriman karena kebijakan keamanan CORS (Cross-Origin Resource Sharing)
+             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+             body: JSON.stringify(dataKirim)
+            })
+         .then(response => response.json())
+         .then(data => {
+             console.log("Data sukses terkirim ke Spreadsheet:", data);
+            })
+         .catch(error => {
+             console.error("Gagal mengirim data:", error);
+            });
+        }
+    </script>
+</body>
+</html>
