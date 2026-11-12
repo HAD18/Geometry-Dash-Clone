@@ -538,7 +538,7 @@
                 // Level & Physics Tracking
                 this.currentFrame = 0;
                 this.attempts = 1;
-                this.bestPercent = 0;
+                this.bestPercent = parseInt(localStorage.getItem('gd_best_percent')) || 0;
                 this.obstacles = [];
                 this.particles = new ParticleSystem();
                 
@@ -709,6 +709,7 @@
                 const finalPercent = Math.min(100, Math.floor((this.currentFrame / TOTAL_FRAMES) * 100));
                 if (finalPercent > this.bestPercent) {
                     this.bestPercent = finalPercent;
+                    localStorage.setItem('gd_best_percent', this.bestPercent);
                 }
 
                 simpanDataKeSpreadsheet(finalPercent, this.attempts);
@@ -742,6 +743,7 @@
                 document.getElementById('victory-attempts').innerText = this.attempts;
                 document.getElementById('victory-menu').classList.remove('hidden');
                 this.bestPercent = 100;
+                localStorage.setItem('gd_best_percent', 100);
                 this.updateUI();
             }
 
