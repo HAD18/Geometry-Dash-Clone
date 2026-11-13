@@ -136,9 +136,12 @@
             </div>
 
             <!-- Footer & Info -->
-            <div class="w-full flex justify-between items-end text-xs text-slate-400 border-t border-slate-800/80 pt-4">
+           <div class="w-full flex justify-between items-end text-xs text-slate-400 border-t border-slate-800/80 pt-4">
                 <div>Controls: <span class="text-cyan-400 font-bold">Space / Up Arrow / Tap Screen</span> to Jump</div>
-                <div id="best-score-display" class="text-emerald-400 font-bold">BEST: 0%</div>
+                <div class="flex gap-4">
+                    <div id="total-attempts-display" class="text-cyan-400 font-bold">TOTAL ATTEMPTS: 0</div>
+                    <div id="best-score-display" class="text-emerald-400 font-bold">BEST: 0%</div>
+                </div>
             </div>
         </div>
 
@@ -537,7 +540,8 @@
                 
                 // Level & Physics Tracking
                 this.currentFrame = 0;
-                this.attempts = 1;
+                this.attempts = 1; // Attempt untuk sesi saat ini (layar pop up)
+                this.totalAttempts = parseInt(localStorage.getItem('gd_total_attempts')) || 0; // Total attempt permanen
                 this.bestPercent = parseInt(localStorage.getItem('gd_best_percent')) || 0;
                 this.obstacles = [];
                 this.particles = new ParticleSystem();
@@ -576,6 +580,10 @@
                     this.deathTimeout = null;
                 }
                 
+                // Menambah dan menyimpan total attempt setiap kali game dimulai
+                this.totalAttempts++;
+                localStorage.setItem('gd_total_attempts', this.totalAttempts);
+
                 this.canRestart = false;
                 this.resetPlayer();
                 this.currentFrame = 0;
@@ -755,7 +763,13 @@
             }
 
             updateUI() {
-                document.getElementById('best-score-display').innerText = `BEST: ${this.bestPercent}%`;
+               document.getElementById('best-score-display').innerText = `BEST: ${this.bestPercent}%`;
+                
+                // Update teks total attempts
+                const totalDisplay = document.getElementById('total-attempts-display');
+                if (totalDisplay) {
+                    totalDisplay.innerText = `TOTAL ATTEMPTS: ${this.totalAttempts}`;
+                }
             }
 
             // Forgiving Hitbox & Solid Block Physics Collision Detection
