@@ -695,6 +695,7 @@
                     clearTimeout(this.deathTimeout);
                     this.deathTimeout = null;
                 }
+                this.attempts = 1;
                 this.canRestart = false;
                 this.state = 'MENU';
                 audio.stopMusic();
