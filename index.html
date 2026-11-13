@@ -581,8 +581,8 @@
                 }
                 
                 // Menambah dan menyimpan total attempt setiap kali game dimulai
-                this.totalAttempts++;
-                localStorage.setItem('gd_total_attempts', this.totalAttempts);
+               // this.totalAttempts++;
+               // localStorage.setItem('gd_total_attempts', this.totalAttempts);
 
                 this.canRestart = false;
                 this.resetPlayer();
@@ -713,6 +713,8 @@
                 this.screenShake = 20;
                 audio.stopMusic();
                 audio.playExplode();
+                this.totalAttempts++;
+                localStorage.setItem('gd_total_attempts', this.totalAttempts);
 
                 // Lock percentage exact value at instant of death
                 const finalPercent = Math.min(100, Math.floor((this.currentFrame / TOTAL_FRAMES) * 100));
@@ -746,6 +748,8 @@
                 this.state = 'VICTORY';
                 audio.stopMusic();
                 audio.playVictory();
+                this.totalAttempts++;
+                localStorage.setItem('gd_total_attempts', this.totalAttempts);
 
                 simpanDataKeSpreadsheet(100, this.attempts);
 
